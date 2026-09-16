@@ -1,0 +1,30 @@
+name: RDP
+
+on:
+  workflow_dispatch:
+
+jobs:
+  secure-rdp:
+    runs-on: windows-latest
+    timeout-minutes: 3600
+
+    steps:
+      - name: Configure RDP
+        shell: powershell
+        run: |
+          $rdpPath = 'HKLM:\System\CurrentControlSet\Control\Terminal Server'
+          $tcpPath = 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp'
+
+          Set-ItemProperty -Path $rdpPath -Name 'fDenyTSConnections' -Value 0 -Force
+          Set-ItemProperty -Path $tcpPath -Name 'UserAuthentication' -Value 0 -Force
+          Set-ItemProperty -Path $tcpPath -Name 'SecurityLayer' -Value 0 -Force
+
+          netsh advfirewall firewall delete rule name="RDP-Tailscale" 2>$null
+          netsh advfirewall firewall add rule name="RDP-Tailscale" dir=in action=allow protocol=TCP localport=3389
+
+          if (Get-Service -Name TermService -ErrorAction SilentlyContinue) {
+              Restart-Service -Name TermService -Force
+          }
+
+      - name: Create RDP User
+        she
